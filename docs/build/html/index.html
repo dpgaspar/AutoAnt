@@ -54,6 +54,68 @@ on a JSON file.</p>
 <p><a class="reference external" href="https://github.com/dpgaspar/AutoAnt/issues/new">Issues, bugs and new features</a></p>
 <p><a class="reference external" href="https://github.com/dpgaspar/AutoAnt/fork">Contribute</a></p>
 </div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>Installation is straightforward, using the normal python package install.
+I do advise you to additionally install the base skeleton application
+so that you can immediately have a running application (without any models yet) and an easy to grow boilerplate.</p>
+<p>Checkout installation video on <a class="reference external" href="http://youtu.be/ZrqFDroqqWE">YouTube</a></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Remember the initial user is <strong>&#8216;admin&#8217;</strong> password <strong>&#8216;general&#8217;</strong>.</p>
+</div>
+</div>
+<div class="section" id="using-pip">
+<h2>Using pip<a class="headerlink" href="#using-pip" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first"><strong>Simple Install</strong></p>
+<blockquote>
+<div><p>You can install AutoAnt simply by:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ pip install autoant
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first"><strong>Advised Virtual Environment Install</strong></p>
+<blockquote>
+<div><p>Virtual env is highly advisable because the more projects you have,
+the more likely it is that you will be working with
+different versions of Python itself, or at least different versions of Python libraries.
+Let’s face it: quite often libraries break backwards compatibility,
+and it’s unlikely that any serious application will have zero dependencies.
+So what do you do if two or more of your projects have conflicting dependencies?</p>
+<p>If you are on Mac OS X or Linux, chances are that one of the following two commands will work for you:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ sudo easy_install virtualenv
+</pre></div>
+</div>
+<p>or even better:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ sudo pip install virtualenv
+</pre></div>
+</div>
+<p>One of these will probably install virtualenv on your system.
+Maybe it’s even in your package manager. If you use a debian system (like Ubuntu), try:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ sudo apt-get install python-virtualenv
+</pre></div>
+</div>
+<p>Once you have virtualenv installed, :</p>
+<div class="highlight-python"><div class="highlight"><pre>$ mkdir myproject
+$ cd myproject
+$ virtualenv venv
+New python executable in venv/bin/python
+Installing distribute............done.
+$ . venv/bin/activate
+(venv)$
+</pre></div>
+</div>
+<p>Now install <strong>AutoAnt</strong> on the virtual env,
+it will install all the dependencies and these will be isolated from your system&#8217;s python packages</p>
+<div class="highlight-python"><div class="highlight"><pre>(venv)$ pip install autoant
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div>
 <div class="section" id="the-idea">
 <h2>The Idea<a class="headerlink" href="#the-idea" title="Permalink to this headline">¶</a></h2>
 <p>AutoAnt structure is based on <strong>Producers</strong> and <strong>Processors</strong>, every item produced is subject to a
@@ -542,6 +604,8 @@ This processor needs python&#8217;s excellent <strong>pysmb</strong> package.</p
   <ul>
 <li><a class="reference internal" href="#">Auto Ant</a><ul>
 <li><a class="reference internal" href="#fixes-bugs-and-contributions">Fixes, bugs and contributions</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#using-pip">Using pip</a></li>
 <li><a class="reference internal" href="#the-idea">The Idea</a></li>
 <li><a class="reference internal" href="#quick-howto">Quick HowTo</a></li>
 <li><a class="reference internal" href="#producers-and-processors">Producers and Processors</a></li>
@@ -590,7 +654,7 @@ This processor needs python&#8217;s excellent <strong>pysmb</strong> package.</p
     </div>
     <div class="footer">
         &copy; Copyright 2014, Daniel Vaz Gaspar.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

@@ -17,6 +17,74 @@ You're welcome to report bugs, propose new features, or even better contribute t
 
 `Contribute <https://github.com/dpgaspar/AutoAnt/fork>`_
 
+Installation
+------------
+
+Installation is straightforward, using the normal python package install.
+I do advise you to additionally install the base skeleton application
+so that you can immediately have a running application (without any models yet) and an easy to grow boilerplate.
+
+Checkout installation video on `YouTube <http://youtu.be/ZrqFDroqqWE>`_
+
+.. note:: Remember the initial user is **'admin'** password **'general'**.
+
+Using pip
+---------
+
+- **Simple Install**
+
+    You can install AutoAnt simply by::
+
+	$ pip install autoant
+
+- **Advised Virtual Environment Install**
+
+    Virtual env is highly advisable because the more projects you have,
+    the more likely it is that you will be working with
+    different versions of Python itself, or at least different versions of Python libraries.
+    Let’s face it: quite often libraries break backwards compatibility,
+    and it’s unlikely that any serious application will have zero dependencies.
+    So what do you do if two or more of your projects have conflicting dependencies?
+
+    If you are on Mac OS X or Linux, chances are that one of the following two commands will work for you:
+
+    ::
+
+        $ sudo easy_install virtualenv
+
+    or even better:
+
+    ::
+
+        $ sudo pip install virtualenv
+
+    One of these will probably install virtualenv on your system.
+    Maybe it’s even in your package manager. If you use a debian system (like Ubuntu), try:
+
+    ::
+
+        $ sudo apt-get install python-virtualenv
+
+    Once you have virtualenv installed, :
+
+    ::
+
+        $ mkdir myproject
+        $ cd myproject
+        $ virtualenv venv
+        New python executable in venv/bin/python
+        Installing distribute............done.
+        $ . venv/bin/activate
+        (venv)$
+
+    Now install **AutoAnt** on the virtual env,
+    it will install all the dependencies and these will be isolated from your system's python packages
+
+    ::
+
+        (venv)$ pip install autoant
+
+
 
 The Idea
 --------

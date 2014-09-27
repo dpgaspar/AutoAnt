@@ -11,3 +11,5 @@ on a JSON file.
 Documentation
 =============
 
+Take a look at installation, quick how to tutorials, API reference etc: `Documentation <http://autoant.readthedocs.org/en/latest/>`_
+
