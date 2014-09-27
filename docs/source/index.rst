@@ -172,7 +172,11 @@ Know add to your scheduling system **crontab** on UNIX or **Scheduled** **Tasks*
 
 crontab::
 
-     5 * * * * autoant_console --config /home/of/config/config.json
+    */5 * * * * autoant_console --config /home/of/config/config.json &>> autoant.log
+
+Note:
+    If you're running on a python's virtual env has advised, you will have to write a small
+    script to activate the enviroment and then execute autoant.
 
 AutoAnt will every 5 minutes look for new files on your local directory */db/exports/contacts/ every new
 file will be sent to *remoteserver.domain.com* . This is ok, what will AutoAnt add to this apparently simple task
