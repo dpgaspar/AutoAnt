@@ -1,0 +1,6 @@
+include LICENSE
+include README.rst
+recursive-include ./bin *
+recursive-include ./docs *
+recursive-include autoant *
+prune *.pyc
