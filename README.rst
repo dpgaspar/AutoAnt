@@ -21,6 +21,6 @@ Features:
   - Filter and Rename files using regular expressions.
   - Open file detection (Linux only).
   - Optional, parallel (Threads) processing.
-  - Differential processing, only processes what has changed. (On directories, only new or modified files).
+  - Differential processing, only process what has changed. (On directories, only new or modified files).
   - Highly extensible base, you can easily create your own **processors**, or **producers**
 
