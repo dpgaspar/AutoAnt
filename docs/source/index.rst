@@ -78,6 +78,11 @@ Using pip
 
         (venv)$ pip install autoant
 
+    Next you can run the command line utility, to check if everything is ok :)
+
+    ::
+
+        (venv)$ autoant_console -h
 
 
 The Idea
