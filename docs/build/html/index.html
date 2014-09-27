@@ -1,0 +1,596 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Auto Ant &mdash; AutoAnt 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="AutoAnt 0.2.0 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">AutoAnt 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="auto-ant">
+<h1>Auto Ant<a class="headerlink" href="#auto-ant" title="Permalink to this headline">¶</a></h1>
+<p>AutoAnt is an object processing automation package. It&#8217;s ideal for file processing, if you need
+to process/syncronize/move files on several directories to different locations (local or remote)
+and then renaming/moving/deleting or what ever you want. This is the answer.</p>
+<p>It&#8217;s extremely flexible and extensible, just describe your Sys Admin file/<em>something</em> processing nightmare
+on a JSON file.</p>
+<div class="section" id="fixes-bugs-and-contributions">
+<h2>Fixes, bugs and contributions<a class="headerlink" href="#fixes-bugs-and-contributions" title="Permalink to this headline">¶</a></h2>
+<p>You&#8217;re welcome to report bugs, propose new features, or even better contribute to this project.</p>
+<p><a class="reference external" href="https://github.com/dpgaspar/AutoAnt/issues/new">Issues, bugs and new features</a></p>
+<p><a class="reference external" href="https://github.com/dpgaspar/AutoAnt/fork">Contribute</a></p>
+</div>
+<div class="section" id="the-idea">
+<h2>The Idea<a class="headerlink" href="#the-idea" title="Permalink to this headline">¶</a></h2>
+<p>AutoAnt structure is based on <strong>Producers</strong> and <strong>Processors</strong>, every item produced is subject to a
+processing sequence. You can have many <strong>Producers</strong> associated to Nth processing sequences.</p>
+<p><strong>Producers</strong> - Will produce objects to be processed.</p>
+<p><strong>Processors</strong> - Will process the objects.</p>
+<p>AutoAnt has a command line utility that you can use for easy scheduling, or on your own scripts.
+It will read a JSON config file that describes the automation process.</p>
+<p>The config file is a list of objects containing the following structure:</p>
+<div class="highlight-python"><div class="highlight"><pre>[
+    {
+        &quot;producer_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;SOME UNIQUE ID&quot;,
+                &quot;type_key&quot;: &quot;KEY OF PRODUCER&quot;,
+                ...
+            },
+            ...
+        ]
+        &quot;processor_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;SOME UNIQUE ID&quot;,
+                &quot;type_key&quot;: &quot;KEY OF PROCESSOR&quot;,
+                ...
+            },
+            ....
+        ]
+    },
+    ....
+]
+</pre></div>
+</div>
+<p>It&#8217;s config is a list of automation <em>steps</em> that can be run on a different threads (optional).
+Each <em>step</em> is an object with a list of producers and a list of processors.
+Every <em>item</em> (files, lines on a file, db records) is submitted to the processing sequence.</p>
+<p>Every producer and processor has a type and a name, this is required.</p>
+</div>
+<div class="section" id="quick-howto">
+<h2>Quick HowTo<a class="headerlink" href="#quick-howto" title="Permalink to this headline">¶</a></h2>
+<p>Enough talk, let&#8217;s go right into a quick example.</p>
+<p>Let&#8217;s say you have some file processing to do, and you need to automate it, probably you have already
+made tons of similar scripts on file automation, but every time you have a new problem you have to
+write something new, for the same abstract issue.</p>
+<p>On our example, you have a database that generates data files, these files are supposed
+to be processed on a remote server, for the first task you have to copy every new file to a remote FTP server.</p>
+<p>We are going to write a JSON configuration file describing AutoAnt solution:</p>
+<div class="highlight-python"><div class="highlight"><pre>[
+    {
+        &quot;producer_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;DBSOURCE&quot;,
+                &quot;type_key&quot;: dir_mon&quot;,
+                &quot;basedir&quot;: &quot;/db/export/contacts&quot;,
+                &quot;recursive&quot;: &quot;True&quot;
+            }
+        ]
+        &quot;process_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;Remote&quot;,
+                &quot;type_key&quot;: &quot;ftp&quot;,
+                &quot;remote_dir&quot;: &quot;/contacts&quot;,
+                &quot;remote_host&quot;: &quot;remoteserver.domain.com&quot;,
+                &quot;username&quot;: &quot;user&quot;,
+                &quot;password&quot;: &quot;password&quot;
+            }
+        ]
+    }
+]
+</pre></div>
+</div>
+<p>Know add to your scheduling system <strong>crontab</strong> on UNIX or <strong>Scheduled</strong> <strong>Tasks</strong> on Windows.</p>
+<p>crontab:</p>
+<div class="highlight-python"><div class="highlight"><pre>5 * * * * autoant_console --config /home/of/config/config.json
+</pre></div>
+</div>
+<p>AutoAnt will every 5 minutes look for new files on your local directory <em>/db/exports/contacts/ every new
+file will be sent to *remoteserver.domain.com</em> . This is ok, what will AutoAnt add to this apparently simple task</p>
+<ul class="simple">
+<li>You will have a detailed and highly configurable log, using python&#8217;s standard lib, logging.</li>
+<li>If something goes wrong on your file processing (remote server is down or something),
+the failed files will be reprocessed next time, without the use of
+moving/coping/renaming the succeeded ones.</li>
+<li>The copy is recursive and differential the directory structure will be created on the remote site.</li>
+<li>If a file is still open (being created by the database on this example), the file is not processed this time.
+(Linux only feature).</li>
+<li>Integrated extensible highly configurable system.</li>
+<li>Over loop prevention, AutoAnt will not run if another instance using the same config is still processing.</li>
+</ul>
+<p>Now your company wants to copy the same files to a different location but this time they only accept SFTP
+(they probably know better then FTP). Just add a json object to the &#8216;process_sequence&#8217; property:</p>
+<div class="highlight-python"><div class="highlight"><pre>[
+    {
+        &quot;producer_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;DBSOURCE&quot;,
+                &quot;type_key&quot;: dir_mon&quot;,
+                &quot;basedir&quot;: &quot;/db/export/contacts&quot;,
+                &quot;recursive&quot;: &quot;True&quot;
+            }
+        ]
+        &quot;process_sequence&quot;: [
+            {
+                &quot;name&quot;: &quot;Remote&quot;,
+                &quot;type_key&quot;: &quot;ftp&quot;,
+                &quot;remote_dir&quot;: &quot;/contacts&quot;,
+                &quot;remote_host&quot;: &quot;remoteserver.domain.com&quot;,
+                &quot;username&quot;: &quot;user&quot;,
+                &quot;password&quot;: &quot;password&quot;
+            },
+            {
+                &quot;name&quot;: &quot;Remote2&quot;,
+                &quot;type_key&quot;: &quot;scp&quot;,
+                &quot;remote_dir&quot;: &quot;&quot;,
+                &quot;remote_host&quot;: &quot;remoteserver2.domain.com&quot;,
+                &quot;username&quot;: &quot;user2&quot;,
+                &quot;password&quot;: &quot;password&quot;
+            }
+        ]
+    }
+]
+</pre></div>
+</div>
+<p>You have two remote copies, and if either fails they will be reprocessed. If a file put or
+connection fails, on <strong>Remote2</strong> second copy, it will be resent next up time and only to
+<em>remoteserver2.domain.com</em>.</p>
+<p>Remember each item on a processing sequence is independent by default.</p>
+<p>If you want to make them dependent on the success or failure of the previous processor,
+just add the &#8216;dependent&#8217; property with value &#8216;True&#8217; to the processor.
+This way all failed items will not be processed by the next processor, this is useful for
+many purposes like coping files and renaming them, if a copy fails the file will not be renamed.</p>
+<p>Note that the name property is a free tag, use it for giving a friendly name for your directory monitoring
+and processing tasks. Make sure they are unique on their JSON structure. They will be used
+to create info files from AutoAnt named on this example: DBCONTACTS.Remote.sav and DBCONTACTS.Remote2.sav.
+and your log file will have this tags on each line.</p>
+</div>
+<div class="section" id="producers-and-processors">
+<h2>Producers and Processors<a class="headerlink" href="#producers-and-processors" title="Permalink to this headline">¶</a></h2>
+<p>All producers and processors share the following properties:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>A unique user&#8217;s free tag to id the producer</td>
+</tr>
+<tr class="row-odd"><td>type_key</td>
+<td>the type of producer, run autoant_console -p to list all available</td>
+</tr>
+</tbody>
+</table>
+<p>All producers share the following properties</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>thread</td>
+<td>Will run the producing process and it&#8217;s associated processor on a
+separate thread.</td>
+</tr>
+</tbody>
+</table>
+<p>All processors share the following properties</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>dependent</td>
+<td>A boolean property &#8216;True&#8217;/&#8217;False&#8217; to make a processor dependent
+of the preceding processor success</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="producer-directory-monitor">
+<h2>Producer - Directory Monitor<a class="headerlink" href="#producer-directory-monitor" title="Permalink to this headline">¶</a></h2>
+<p>This producer key is <strong>&#8220;dir_mon&#8221;</strong>. And produces <em>FileItem</em> objects.</p>
+<p>This producer will scan recursively or not a local directory and collects all files to be processed</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>basedir</td>
+<td>The local directory to monitor</td>
+</tr>
+<tr class="row-odd"><td>recursive</td>
+<td>(Optional) boolean string (True/False) collects file
+recusively or not. Default is True</td>
+</tr>
+<tr class="row-even"><td>filter</td>
+<td>(Optional) regular expression, all files must pass.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example</strong>: If you want to monitor only text files from a directory use:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;AUTOANT&quot;</span><span class="p">,</span>
+    <span class="s">&quot;type_key&quot;</span><span class="p">:</span> <span class="s">&quot;dir_mon&quot;</span><span class="p">,</span>
+    <span class="s">&quot;basedir&quot;</span><span class="p">:</span> <span class="s">&quot;/home/dpgaspar/workspace/autoant/&quot;</span><span class="p">,</span>
+    <span class="s">&quot;filter&quot;</span><span class="p">:</span> <span class="s">&quot;.*.txt&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="processors">
+<h2>Processors<a class="headerlink" href="#processors" title="Permalink to this headline">¶</a></h2>
+<p>All processors share a common property named state that can be True or False. By default
+it&#8217;s enabled, it will not process items that were already processed. If turned to False,
+it will always process everything, every time.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>state</td>
+<td>Keeps state between runs. will record successfully processed items</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="processor-scp">
+<h2>Processor - SCP<a class="headerlink" href="#processor-scp" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;scp&#8221;</strong></p>
+<p>Will <strong>Put</strong> files remotely using SFTP protocol. Reconstructs missing directories structure.
+This processor needs python&#8217;s excellent <strong>Paramiko</strong> package.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>remote_dir</td>
+<td>The remote directory where files will be copied to</td>
+</tr>
+<tr class="row-odd"><td>remote_host</td>
+<td>Remote host IP or network name.</td>
+</tr>
+<tr class="row-even"><td>username</td>
+<td>The username for authentication</td>
+</tr>
+<tr class="row-odd"><td>password</td>
+<td>(Optional) The password for authentication</td>
+</tr>
+<tr class="row-even"><td>key_filename</td>
+<td>(Optional) The key RSA file for authentication</td>
+</tr>
+<tr class="row-odd"><td>timeout</td>
+<td>(Optional) The connection&#8217;s timeout.</td>
+</tr>
+<tr class="row-even"><td>channel_timeout</td>
+<td>(Optional) The channel timeout.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="processor-smb">
+<h2>Processor - SMB<a class="headerlink" href="#processor-smb" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;smb&#8221;</strong></p>
+<p>Will <strong>Copy</strong> files remotely using SMB protocol (Windows file share).
+Reconstructs missing directories structure.
+This processor needs python&#8217;s excellent <strong>pysmb</strong> package.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>remote_dir</td>
+<td>The remote directory where files will be copied to</td>
+</tr>
+<tr class="row-odd"><td>remote_host</td>
+<td>Remote host IP or network name.</td>
+</tr>
+<tr class="row-even"><td>remote_name</td>
+<td>The NETBIOS remote computer name.</td>
+</tr>
+<tr class="row-odd"><td>local_name</td>
+<td>THE NETBIOS local computer name.</td>
+</tr>
+<tr class="row-even"><td>username</td>
+<td>The username for authentication</td>
+</tr>
+<tr class="row-odd"><td>password</td>
+<td>(Optional) The password for authentication</td>
+</tr>
+<tr class="row-even"><td>timeout</td>
+<td>(Optional) The connection&#8217;s timeout.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="processor-ftp">
+<h2>Processor - FTP<a class="headerlink" href="#processor-ftp" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;ftp&#8221;</strong></p>
+<p>Will <strong>Put</strong> files remotely using FTP or FTPS protocol. Reconstructs missing directories structure.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>remote_dir</td>
+<td>The remote directory where files will be copied to</td>
+</tr>
+<tr class="row-odd"><td>remote_host</td>
+<td>Remote host IP or network name.</td>
+</tr>
+<tr class="row-even"><td>remote_port</td>
+<td>(Optional) Remote host port number for FTP. (default 21)</td>
+</tr>
+<tr class="row-odd"><td>username</td>
+<td>The username for authentication</td>
+</tr>
+<tr class="row-even"><td>password</td>
+<td>(Optional) The password for authentication</td>
+</tr>
+<tr class="row-odd"><td>is_ssl_auth</td>
+<td>(Options) Encrypts authentication (True/False)</td>
+</tr>
+<tr class="row-even"><td>is_ssl_data</td>
+<td>(Optional) Encrypts data (True/False)</td>
+</tr>
+<tr class="row-odd"><td>timeout</td>
+<td>(Optional) The connection&#8217;s timeout.</td>
+</tr>
+<tr class="row-even"><td>debug_level</td>
+<td>(Optional) python&#8217;s ftplib debug level, 0,1 or 2.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="processor-rename">
+<h2>Processor - Rename<a class="headerlink" href="#processor-rename" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;rename&#8221;</strong></p>
+<p>Will rename files using a python&#8217;s regular expression.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="79%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>rule_origin</td>
+<td>Regular expression to capture all or part of the filename</td>
+</tr>
+<tr class="row-odd"><td>rule_destination</td>
+<td>Regular expression to transform the captured part from rule_origin</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example</strong>: Rename recursively all files with prefix &#8220;_&#8221;:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;RENAME_1&quot;</span><span class="p">,</span>
+    <span class="s">&quot;type_key&quot;</span><span class="p">:</span> <span class="s">&quot;rename&quot;</span><span class="p">,</span>
+    <span class="s">&quot;rule_origin&quot;</span><span class="p">:</span> <span class="s">&quot;(.*)&quot;</span><span class="p">,</span>
+    <span class="s">&quot;rule_destination&quot;</span><span class="p">:</span> <span class="s">&quot;_</span><span class="se">\\</span><span class="s">1&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Attention if you run this example many times it will add up &#8220;_&#8221; ahead of file names.</p>
+</div>
+<div class="section" id="processor-move">
+<h2>Processor - Move<a class="headerlink" href="#processor-move" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;move&#8221;</strong></p>
+<p>Will move files to a different directory.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="30%" />
+<col width="70%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>dest_dir</td>
+<td>Destination directory</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example</strong>: Move files recursively:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;MOVE_1&quot;</span><span class="p">,</span>
+    <span class="s">&quot;dest_dir&quot;</span><span class="p">:</span> <span class="s">&quot;/name/of/the/destination/dir&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="processor-copy">
+<h2>Processor - Copy<a class="headerlink" href="#processor-copy" title="Permalink to this headline">¶</a></h2>
+<p>This processor key is <strong>&#8220;cp&#8221;</strong></p>
+<p>Will copy local files to a different directory.</p>
+<p>Their configuration properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="30%" />
+<col width="70%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>dest_dir</td>
+<td>Destination directory</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example</strong>: Copies files recursively:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;COPY_1&quot;</span><span class="p">,</span>
+    <span class="s">&quot;dest_dir&quot;</span><span class="p">:</span> <span class="s">&quot;/name/of/the/destination/dir&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Auto Ant</a><ul>
+<li><a class="reference internal" href="#fixes-bugs-and-contributions">Fixes, bugs and contributions</a></li>
+<li><a class="reference internal" href="#the-idea">The Idea</a></li>
+<li><a class="reference internal" href="#quick-howto">Quick HowTo</a></li>
+<li><a class="reference internal" href="#producers-and-processors">Producers and Processors</a></li>
+<li><a class="reference internal" href="#producer-directory-monitor">Producer - Directory Monitor</a></li>
+<li><a class="reference internal" href="#processors">Processors</a></li>
+<li><a class="reference internal" href="#processor-scp">Processor - SCP</a></li>
+<li><a class="reference internal" href="#processor-smb">Processor - SMB</a></li>
+<li><a class="reference internal" href="#processor-ftp">Processor - FTP</a></li>
+<li><a class="reference internal" href="#processor-rename">Processor - Rename</a></li>
+<li><a class="reference internal" href="#processor-move">Processor - Move</a></li>
+<li><a class="reference internal" href="#processor-copy">Processor - Copy</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">AutoAnt 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Daniel Vaz Gaspar.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
