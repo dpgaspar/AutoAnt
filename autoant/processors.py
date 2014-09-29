@@ -1,10 +1,12 @@
-import re, os, pickle, shutil
+from __future__ import unicode_literals
+import io
+import re, os, pickle, shutil, sys
 import logging
 from ftplib import FTP, FTP_TLS
 from sys import platform
 from .utilslinux import is_file_open
 from .utils import boolstr, sub_list
-from .providers import register_processor
+from .providers import BaseProvider, register_processor, register_property, PROP_HIDDEN_PREFIX
 
 try:
     import paramiko
@@ -57,7 +59,9 @@ class ProcessSequence(object):
             item.list()
 
 
-class BaseProcessor(object):
+@register_property('state', 'Keeps processing state, will not repeat items', boolstr, False, "True")
+@register_property('depends', 'If True will only process previous processing successes', boolstr, False, "False")
+class BaseProcessor(BaseProvider):
     """
         This is the base class of all processors
     """
@@ -65,17 +69,18 @@ class BaseProcessor(object):
     process_fails = None
     _prod_name = None
     _name = None
-    
+
     def __init__(self, **kwargs):
+        super(BaseProcessor, self).__init__(**kwargs)
         try:
             self._prod_name = kwargs['mon_name']
             self._name = kwargs['name']
         except:
             log.exception("Missing unique name process identifier")
-        self.state = boolstr(kwargs.get('state', "True"))
-        self.depends = boolstr(kwargs.get('depends', "False"))
         self.processed = []
         log.debug("Config Processor {0} with {1}".format(self.__class__.__name__, kwargs))
+
+
 
     @property
     def name(self):
@@ -98,12 +103,12 @@ class BaseProcessor(object):
         process = sub_list(current, self.processed)
         self.process_fails = []
         if self.pre_process():
-            for file_item in process:
-                self.pre_run(file_item)
-                success = self.run(file_item)
+            for item in process:
+                self.pre_run(item)
+                success = self.run(item)
                 if not success:
-                    self.process_fails.append(file_item)
-                self.post_run(file_item)
+                    self.process_fails.append(item)
+                self.post_run(item)
             self.post_process()
             self.processed = sub_list(current, self.process_fails)
         else:
@@ -177,17 +182,39 @@ class BaseProcessorRemoteCP(BaseProcessor):
     def __del__(self):
         pass
 
+@register_property('stdout', 'Where will output go, blank is STDOUT', str, False, "")
+@register_processor('echo', 'Writes produced items, default stdout')
+class ProcessorEcho(BaseProcessor):
+    fd = None
 
+    def __init__(self, **kwargs):
+        super(ProcessorEcho, self).__init__(**kwargs)
 
+    def run(self, item):
+        super(ProcessorEcho, self).run(item)
+        self.fd.write("{0}\n".format(item.__repr__()))
+
+    def pre_process(self):
+        super(ProcessorEcho, self).pre_process()
+        if not self.stdout:
+            self.fd = sys.stdout
+            log.debug("{0}: Opened STDOUT".format(self.name))
+        else:
+            self.fd = io.open(self.stdout, 'w')
+            log.debug("{0}: Opened {1}".format(self.name, self.stdout))
+        return True
+
+    def post_process(self):
+        super(ProcessorEcho, self).post_process()
+        if self.fd != sys.stdout:
+            return self.fd.close()
+
+@register_property('rule_origin', 'Regex origin for sub rule', str, True, "")
+@register_property('rule_destination', 'Regex destination for sub rule', str, True, "")
 @register_processor('rename', 'Rename local files')
 class ProcessorRename(BaseProcessor):
     def __init__(self, **kwargs):
         super(ProcessorRename, self).__init__(**kwargs)
-        try:
-            self.rule_origin = kwargs['rule_origin']
-            self.rule_destination = kwargs['rule_destination']
-        except:
-            log.exception("Missing rule parameter")
 
     def run(self, file_item):
         super(ProcessorRename, self).run(file_item)
@@ -205,14 +232,11 @@ class ProcessorRename(BaseProcessor):
         return True
 
 
+@register_property('dest_dir', 'Destination directory', str, True, "")
 @register_processor('move', 'Move local files')
 class ProcessorMove(BaseProcessor):
     def __init__(self, **kwargs):
         super(ProcessorMove, self).__init__(**kwargs)
-        try:
-            self.dest_dir = kwargs['dest_dir']
-        except:
-            log.exception("Missing dest_dir parameter")
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
@@ -241,14 +265,11 @@ class ProcessorMove(BaseProcessor):
         return True
 
 
+@register_property('dest_dir', 'Destination directory', str, True, "")
 @register_processor('cp', 'Copies local files')
 class ProcessorCopy(BaseProcessor):
     def __init__(self, **kwargs):
         super(ProcessorCopy, self).__init__(**kwargs)
-        try:
-            self.dest_dir = str(kwargs['dest_dir'])
-        except:
-            log.exception("Missing dest_dir parameter")
 
     def __repr__(self):
         return "{0}".format(self.dest_dir)
@@ -279,20 +300,20 @@ class ProcessorCopy(BaseProcessor):
         return True
 
 
+@register_property('remote_host', 'The remote hostname or IP', str, True, "")
+@register_property('remote_name', 'The remote host SMB Name.', str, True, "")
+@register_property('local_name', 'The local host SMB Name', str, True, "")
+@register_property('remote_dir', 'The remote directory', str, True, "")
+@register_property('username', 'The username to authenticate', str, True, "")
+@register_property('password', 'The password to authenticate', str, True, "")
+@register_property('debug_level', 'The debug level 0,1,2', int, False, "0")
+@register_property('timeout', 'The connection timeout in seconds', float, False, DEFAULT_CONNECT_TIMEOUT)
 @register_processor('smb', 'Copies files using SMB')
 class ProcessorSMB(BaseProcessorRemoteCP):
     smb_conn = None
 
     def __init__(self, **kwargs):
         super(ProcessorSMB, self).__init__(**kwargs)
-        self.remote_host = kwargs.get('remote_host')
-        self.remote_name = str(kwargs.get('remote_name'))
-        self.local_name = str(kwargs.get('local_name'))
-        self.remote_dir = kwargs.get('remote_dir')
-        self.username = kwargs.get('username')
-        self.password = kwargs.get('password')
-        self.debug_level = int(kwargs.get('debug_level', 0))
-        self.timeout = float(kwargs.get('timeout', DEFAULT_CONNECT_TIMEOUT))
         if not SMBConnection:
             log.error("No pySMB package please install")
 
@@ -348,22 +369,22 @@ class ProcessorSMB(BaseProcessorRemoteCP):
         return True
 
 
+@register_property('remote_host', 'The remote hostname or IP', str, True, "")
+@register_property('remote_port', 'The remote FTP Port.', int, False, DEFAULT_FTP_PORT)
+@register_property('remote_dir', 'The remote directory', str, True, "")
+@register_property('username', 'The username to authenticate', str, True, "")
+@register_property('password', 'The password to authenticate', str, False, "")
+@register_property('is_ssl_auth', 'Is auth encrypted?', boolstr, False, "False")
+@register_property('is_ssl_data', 'Is Data encrypted?', boolstr, False, "False")
+@register_property('key_filename', 'Filename of key file for auth.', str, False, None)
+@register_property('debug_level', 'The debug level 0,1,2', int, False, "0")
+@register_property('timeout', 'The connection timeout in seconds', float, False, DEFAULT_CONNECT_TIMEOUT)
 @register_processor('ftp', 'Copies files using FTP')
 class ProcessorFTP(BaseProcessorRemoteCP):
     ftp = None
 
     def __init__(self, **kwargs):
         super(ProcessorFTP, self).__init__(**kwargs)
-        self.remote_host = kwargs.get('remote_host')
-        self.remote_port = int(kwargs.get('remote_port', DEFAULT_FTP_PORT))
-        self.remote_dir = kwargs.get('remote_dir')
-        self.is_ssl_auth = boolstr(kwargs.get('is_ssl_auth', "False"))
-        self.is_ssl_data = boolstr(kwargs.get('is_ssl_data', "False"))
-        self.username = kwargs.get('username')
-        self.password = kwargs.get('password')
-        self.key_filename = kwargs.get('key_filename')
-        self.debug_level = int(kwargs.get('debug_level', 0))
-        self.timeout = float(kwargs.get('timeout', DEFAULT_CONNECT_TIMEOUT))
 
     def __repr__(self):
         return "{0}@{1}:{2}".format(self.username, self.remote_host, self.remote_dir)
@@ -426,19 +447,19 @@ class ProcessorFTP(BaseProcessorRemoteCP):
         return True
 
 
+@register_property('remote_host', 'The remote hostname or IP', str, True, "")
+@register_property('remote_dir', 'The remote directory', str, True, "")
+@register_property('username', 'The username to authenticate', str, True, "")
+@register_property('password', 'The password to authenticate', str, False, "")
+@register_property('key_filename', 'Filename of key file for auth.', str, False, None)
+@register_property('channel_timeout', 'The channel timeout in seconds', float, False, DEFAULT_CHANNEL_TIMEOUT)
+@register_property('timeout', 'The connection timeout in seconds', float, False, DEFAULT_CONNECT_TIMEOUT)
 @register_processor('scp', 'Copies files using SFTP')
 class ProcessorSCP(BaseProcessorRemoteCP):
     sftp = None
 
     def __init__(self, **kwargs):
         super(ProcessorSCP, self).__init__(**kwargs)
-        self.remote_host = kwargs.get('remote_host')
-        self.remote_dir = kwargs.get('remote_dir')
-        self.username = kwargs.get('username')
-        self.password = kwargs.get('password')
-        self.key_filename = kwargs.get('key_filename')
-        self.timeout = float(kwargs.get('timeout', DEFAULT_CONNECT_TIMEOUT ))
-        self.channel_timeout = float(kwargs.get('channel_timeout', DEFAULT_CHANNEL_TIMEOUT))
         try:
             self.ssh = paramiko.SSHClient()
         except:
@@ -453,7 +474,7 @@ class ProcessorSCP(BaseProcessorRemoteCP):
             self.ssh.connect(self.remote_host,
                              username=self.username,
                              password=self.password,
-                             key_filename=self.key_filename,
+                             #key_filename=self.key_filename,
                              timeout=self.timeout)
         except Exception as e:
             log.error("{0}: Connect error to {1} {2}".format(self.name, self.remote_host, e))
@@ -504,9 +525,3 @@ class ProcessorSCP(BaseProcessorRemoteCP):
         log.debug("{0}: End Processing {1}".format(self.name, file_item))
         return True
 
-
-
-
-processor_providers = {'baseprocessor': BaseProcessor,
-                       'scp': ProcessorSCP,
-                       'ftp': ProcessorFTP}

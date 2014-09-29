@@ -282,7 +282,7 @@ This producer key is **"dir_mon"**. And produces *FileItem* objects.
 
 This producer will scan recursively or not a local directory and collects all files to be processed
 
-Their configuration properties are:
+Configuration properties are:
 
 +---------------+--------------------------------------------------------------------+
 | Key           | Description                                                        |
@@ -294,6 +294,16 @@ Their configuration properties are:
 +---------------+--------------------------------------------------------------------+
 | filter        | (Optional) regular expression, all files must pass.                |
 +---------------+--------------------------------------------------------------------+
+| mtime         | (Optional) Modification time stamp in minutes.                     |
+|               | If negative ex: -5 will produce files modified less then 5 minutes |
+|               |  ago.                                                              |
+|               | If Positive ex: 5 will produce files modified more then 5 minutes  |
+|               |  ago.                                                              |
++---------------+--------------------------------------------------------------------+
+| atime         | (Optional) Same has mtime but for accessed time stamp.             |
++---------------+--------------------------------------------------------------------+
+| ctime         | (Optional) Same has mtime but for created time stamp.              |
++---------------+--------------------------------------------------------------------+
 
 **Example**: If you want to monitor only text files from a directory use::
 
@@ -301,15 +311,16 @@ Their configuration properties are:
         "name": "AUTOANT",
         "type_key": "dir_mon",
         "basedir": "/home/dpgaspar/workspace/autoant/",
-        "filter": ".*.txt"
+        "filter": ".*.txt$"
     }
 
 Processors
 ----------
 
 All processors share a common property named state that can be True or False. By default
-it's enabled, it will not process items that were already processed. If turned to False,
-it will always process everything, every time.
+it's enabled.
+When enabled, will not process items that were already processed on a previous run.
+If turned to False, it will always process everything, every time.
 
 +---------------+--------------------------------------------------------------------+
 | Key           | Description                                                        |

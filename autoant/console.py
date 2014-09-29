@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import datetime
 from autoant import AutoAnt
 from .providers import providers
 from .version import VERSION_STRING
@@ -23,6 +24,7 @@ parser.add_argument('-p', '--providers', action='store_true', help='Shows availa
 parser.add_argument('-s', '--state', action='store_true', help='List the state of producers')
 parser.add_argument('-d', '--describe', action='store_true', help='Shows a summary of the config')
 parser.add_argument('-v', '--version', action='store_true', help='Shows AutoAnt version')
+parser.add_argument('-m', '--measure', action='store_true', help='Will measure run time')
 
 args = parser.parse_args()
 
@@ -31,6 +33,7 @@ logging.basicConfig(format='%(asctime)s:%(levelname)s:%(name)s:%(message)s')
 logging.getLogger().setLevel(get_log_level(args.loglevel))
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
 
 def main():
     """Entry-point function."""
@@ -46,7 +49,11 @@ def main():
         print("AutoAnt {0}".format(VERSION_STRING))
     else:
         aa = AutoAnt(args.config)
+        t1 = datetime.datetime.now()
         aa.run()
+        t2 = datetime.datetime.now()
+        if vars(args).get('measure'):
+            log.info("Time to Process {0}".format(t2 - t1))
 
 
 if __name__ == '__main__':

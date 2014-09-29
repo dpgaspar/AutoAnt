@@ -1,67 +1,23 @@
 
 import logging
-import datetime
-import os, time, re
-from _compat import as_unicode
+import os, re
 from threading import Thread
-from .utils import boolstr
+from .utils import boolstr, walkfiles
+from .items import FileItem
 from .processors import ProcessSequence
-from .providers import register_producer
+from .providers import BaseProvider, register_producer, register_property
 log = logging.getLogger(__name__)
 
 
-class FileItem(object):
-    """
-        File item holds info about a file to be processed
-    """
-    basedir = ''
-    full_path = ''
-    name = ''
-    size = 0
-    ctime = None
-    mtime = None
-    atime = None
-    processed_time = None
-
-    def __init__(self, path, file_name, basedir=''):
-        self.basedir = basedir
-        # TODO use os.path.join
-        self.full_path = os.path.join(path, file_name)
-        #self.full_path = "{0}/{1}".format(path, file_name)
-        (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(self.full_path)
-        self.name = file_name
-        self.size = size
-        self.mtime = mtime
-        self.ctime = ctime
-        self.atime = atime
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return (self.full_path == other.full_path) and \
-                    (self.size == other.size) and \
-                    (self.mtime == other.mtime)
-        return False
-
-    def __repr__(self):
-        return "{0} size:{1}".format(self.full_path.encode('utf-8'), self.size)
-
-    def set_processed_ts(self):
-        # Timestamps file item when processed
-        self.processed_time = datetime.datetime.now()
-
-    def get_relative_path(self):
-        return self.full_path.replace(self.basedir, '').replace(self.name, '')
-
-
-
-class BaseProducer(Thread):
+class BaseProducer(BaseProvider, Thread):
     """
         All Consumer objects classes inherit from this
     """
     process_sequence = None
 
     def __init__(self, thread=False, **kwargs):
-        super(BaseProducer, self).__init__()
+        Thread.__init__(self)
+        BaseProvider.__init__(self, **kwargs)
         self.is_thread = boolstr(thread)
         self._process_sequence = ProcessSequence()
 
@@ -86,7 +42,12 @@ class BaseProducer(Thread):
         self.process_sequence.list()
 
 
-
+@register_property('basedir', 'Directory to monitor', str, True, "")
+@register_property('recursive', 'Is monitor recursive', boolstr, False, "True")
+@register_property('filter', 'RegEx filter to filenames', str, False, ".*")
+@register_property('mtime', 'Filter files with modified TS', int, False, "0")
+@register_property('atime', 'Filter files with accessed TS', int, False, "0")
+@register_property('ctime', 'Filter files with creation TS', int, False, "0")
 @register_producer('dir_mon', 'Monitors directory changes between runs')
 class DirMon(BaseProducer):
     """
@@ -96,11 +57,9 @@ class DirMon(BaseProducer):
     basedir = ''
     recursive = False
 
-    def __init__(self, basedir='./', recursive="True", filter=".*", **kwargs):
+    def __init__(self, **kwargs):
         super(DirMon, self).__init__(**kwargs)
-        self.basedir = basedir
-        self.recursive = boolstr(recursive)
-        self.filter = filter
+
 
     def get_items(self):
         ret = []
@@ -108,16 +67,15 @@ class DirMon(BaseProducer):
             log.error("Path does not exist {0}".format(self.basedir))
             return []
         if not self.recursive:
-            for file_name in os.listdir(self.basedir):
-                file_full_path = os.path.join(self.basedir, file_name)
-                if re.match(self.filter, file_name) and os.path.isfile(file_full_path):
-                    ret.append(FileItem(self.basedir, file_name, self.basedir))
-            return ret
-        for root, dirs, files in os.walk(self.basedir):
-            os.path.basename(root)
-            for file_name in files:
-                if re.match(self.filter, file_name):
-                    ret.append(FileItem(root, file_name, self.basedir))
+            level = 0
+        else:
+            level = -1
+        for file_name in walkfiles(self.basedir, self.filter, level):
+                # filter file name
+                    if FileItem.check_mtime(file_name, self.mtime) and \
+                        FileItem.check_atime(file_name, self.atime) and \
+                        FileItem.check_ctime(file_name, self.ctime):
+                        ret.append(FileItem(file_name, self.basedir))
         return ret
 
     def __repr__(self):

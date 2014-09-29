@@ -1,0 +1,11 @@
+*.pyc
+*.db
+*.json
+*.sav
+./tmp
+./build/*
+./.idea
+./.idea/*
+env
+venv
+*.sublime*

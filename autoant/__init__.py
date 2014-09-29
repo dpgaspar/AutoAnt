@@ -1,8 +1,6 @@
-import errno
 import logging
 import os
 from .producers import DirMon
-from .processors import BaseProcessor, processor_providers
 from .providers import providers
 
 try:
@@ -88,9 +86,7 @@ class AutoAnt(object):
             with open(filename) as json_file:
                 obj = _json.loads(json_file.read())
 
-        except IOError as e:
-            if e.errno in (errno.ENOENT, errno.EISDIR):
-                return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
-            raise
+        except Exception as e:
+            log.critical('Unable to load configuration file (%s)' % e.message)
+            exit(1)
         return obj
