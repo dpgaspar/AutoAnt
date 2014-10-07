@@ -24,7 +24,6 @@ class AutoAnt(object):
         self.config = self._obj_from_json(config)
         self._config = []
         for config_item in self.config:
-            process_sequence = []
             for producer_args in config_item['producer_sequence']:
                 producer_class = providers.get_class(producer_args['type_key'])
                 producer = producer_class(**producer_args)
@@ -32,7 +31,6 @@ class AutoAnt(object):
                     processor_class = providers.get_class(process['type_key'])
                     process['mon_name'] = producer_args['name']
                     processor = processor_class(**process)
-                    process_sequence.append(processor)
                     producer.add_process(processor)
 
                 self._config.append(producer)

@@ -2,6 +2,9 @@ from __future__ import unicode_literals
 import io
 import re, os, pickle, shutil, sys
 import logging
+import copy
+from threading import Thread
+from Queue import Queue
 from ftplib import FTP, FTP_TLS
 from sys import platform
 from .utilslinux import is_file_open
@@ -33,88 +36,49 @@ def assert_file_locked(file_item):
             raise Exception("File is open")
 
 
-class ProcessSequence(object):
+class ProcessThread(Thread):
     """
-        Holds and runs a process sequence with items
-        from a consumer.
+        Process thread
     """
-    sequence = None
+    def __init__(self, thread_id, processor, p_state):
+        super(ProcessThread, self).__init__()
+        self.thread_id = thread_id
+        self.processor = processor
+        self.p_state = p_state
+        self.processor.pre_process()
 
-    def __init__(self):
-        self.sequence = []
+    def run(self):
+        while True:
+            if not self.p_state.queue.empty():
+                item = self.p_state.queue.get()
+                if item not in self.p_state.processed:
+                    self.processor.pre_run(item)
+                    success = self.processor.run(item)
+                    if not success:
+                        self.p_state.process_fails.append(item)
+                    else:
+                        self.p_state.processed.append(item)
+                    self.processor.post_run(item)
+                self.p_state.queue.task_done()
 
-    def add_process(self, processor):
-        self.sequence.append(processor)
-
-    def run(self, current):
-        for process, i in zip(self.sequence, range(0, len(self.sequence))):
-            if process.depends and i > 0:
-                new_current = sub_list(current, self.sequence[i - 1].process_fails)
-                process.run_all(new_current)
-            else:
-                process.run_all(current)
-
-    def list(self):
-        for item in self.sequence:
-            item.list()
+    def __del__(self):
+        self.processor.post_process()
 
 
-@register_property('state', 'Keeps processing state, will not repeat items', boolstr, False, "True")
-@register_property('depends', 'If True will only process previous processing successes', boolstr, False, "False")
-class BaseProcessor(BaseProvider):
+
+class ProcessState(object):
     """
-        This is the base class of all processors
+        Keeps process data between threads.
+        Holds Queue with work, processed items and failed items
     """
-    processed = None
-    process_fails = None
-    _prod_name = None
-    _name = None
-
-    def __init__(self, **kwargs):
-        super(BaseProcessor, self).__init__(**kwargs)
-        try:
-            self._prod_name = kwargs['mon_name']
-            self._name = kwargs['name']
-        except:
-            log.exception("Missing unique name process identifier")
-        self.processed = []
-        log.debug("Config Processor {0} with {1}".format(self.__class__.__name__, kwargs))
-
-
-
-    @property
-    def name(self):
-        return self._prod_name + '.' + self._name
-
-    @property
-    def producer_name(self):
-        return self._prod_name
-
-    @property
-    def process_name(self):
-        return self._name
+    def __init__(self, name):
+        self.name = name
+        self.processed = list()
+        self.process_fails = list()
+        self.queue = Queue(0)
 
     def _get_filename(self):
         return self.name + '.' + save_file_extension
-
-    def run_all(self, current):
-        if self.state:
-            self.load()
-        process = sub_list(current, self.processed)
-        self.process_fails = []
-        if self.pre_process():
-            for item in process:
-                self.pre_run(item)
-                success = self.run(item)
-                if not success:
-                    self.process_fails.append(item)
-                self.post_run(item)
-            self.post_process()
-            self.processed = sub_list(current, self.process_fails)
-        else:
-            self.process_fails = process
-        if self.state:
-            self.save()
 
     def save(self):
         try:
@@ -130,6 +94,83 @@ class BaseProcessor(BaseProvider):
                     self.processed = pickle.load(f)
         except Exception as e:
             log.error("{0}: Load state file error {1}".format(self.name, e))
+
+
+class ProcessSequence(object):
+    """
+        Holds and runs a process sequence with items
+        from a consumer.
+    """
+    sequence = None
+    threads = []
+
+    def __init__(self):
+        self.sequence = []
+
+    def add_process(self, processor):
+        self.sequence.append(processor)
+
+    def run(self, generator):
+        for process, i in zip(self.sequence, range(0, len(self.sequence))):
+            process_state = ProcessState(process.name)
+            if process.state:
+                process_state.load()
+            for thread_id in range(0, process.threads):
+                process_c = copy.deepcopy(process)
+                thread = ProcessThread(thread_id, process_c, process_state)
+                thread.setDaemon(True)
+                thread.start()
+                self.threads.append(thread)
+            for item in generator():
+                if process.depends:
+                    # This process depends on the previous, will only process successful items
+                    if item not in previous_state.process_fails:
+                        process_state.queue.put(item)
+                else:
+                    process_state.queue.put(item)
+            process_state.queue.join()
+            if process.state:
+                process_state.save()
+            # keep previous state for process dependency
+            previous_state = process_state
+
+    def list(self):
+        for item in self.sequence:
+            item.list()
+
+
+@register_property('state', 'Keeps processing state, will not repeat items', boolstr, False, "True")
+@register_property('depends', 'If True will only process previous processing successes', boolstr, False, "False")
+@register_property('threads', 'Number of threads the process will use', int, False, "1")
+class BaseProcessor(BaseProvider):
+    """
+        This is the base class of all processors
+    """
+    _prod_name = None
+    _name = None
+
+    def __init__(self, **kwargs):
+        BaseProvider.__init__(self, **kwargs)
+        try:
+            self._prod_name = kwargs['mon_name']
+            self._name = kwargs['name']
+        except:
+            log.critical("Missing unique name process identifier")
+            exit(1)
+        log.debug("Config Processor {0} with {1}".format(self.__class__.__name__, kwargs))
+
+
+    @property
+    def name(self):
+        return self._prod_name + '.' + self._name
+
+    @property
+    def producer_name(self):
+        return self._prod_name
+
+    @property
+    def process_name(self):
+        return self._name
 
     def list(self):
         print("Process ID {0}".format(self.name))
@@ -192,7 +233,14 @@ class ProcessorEcho(BaseProcessor):
 
     def run(self, item):
         super(ProcessorEcho, self).run(item)
-        self.fd.write("{0}\n".format(item.__repr__()))
+        try:
+            self.fd.write("{0}\n".format(item.__repr__()))
+            return True
+        except Exception as e:
+            log.error("{0}: Echo file error {1} :{2}".format(self.name, item, e))
+            return False
+        log.debug("End Processing {0}".format(item))
+
 
     def pre_process(self):
         super(ProcessorEcho, self).pre_process()
@@ -240,7 +288,7 @@ class ProcessorMove(BaseProcessor):
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
-        for n in range(1, len(parts)):
+        for n in range(2, len(parts)):
             path = '/'.join(parts[:n])
             try:
                 os.mkdir(path)
@@ -276,7 +324,7 @@ class ProcessorCopy(BaseProcessor):
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
-        for n in range(1, len(parts)):
+        for n in range(2, len(parts)):
             path = '/'.join(parts[:n])
             try:
                 os.mkdir(path)
@@ -342,7 +390,7 @@ class ProcessorSMB(BaseProcessorRemoteCP):
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
-        for n in range(1, len(parts)):
+        for n in range(2, len(parts)):
             path = '/'.join(parts[:n])
             try:
                 self.smb_conn.createDirectory(self.remote_dir, path)
@@ -420,7 +468,7 @@ class ProcessorFTP(BaseProcessorRemoteCP):
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
-        for n in range(1, len(parts)):
+        for n in range(2, len(parts)):
             path = '/'.join(parts[:n])
             try:
                 self.ftp.mkd(path)
@@ -463,7 +511,7 @@ class ProcessorSCP(BaseProcessorRemoteCP):
         try:
             self.ssh = paramiko.SSHClient()
         except:
-            log.error("No paramiko package please install")
+            log.error("No paramiko package please install, run: pip install paramiko")
 
     def __repr__(self):
         return "{0}@{1}:{2}".format(self.username, self.remote_host, self.remote_dir)
@@ -474,7 +522,7 @@ class ProcessorSCP(BaseProcessorRemoteCP):
             self.ssh.connect(self.remote_host,
                              username=self.username,
                              password=self.password,
-                             #key_filename=self.key_filename,
+                             key_filename=self.key_filename,
                              timeout=self.timeout)
         except Exception as e:
             log.error("{0}: Connect error to {1} {2}".format(self.name, self.remote_host, e))
@@ -501,7 +549,7 @@ class ProcessorSCP(BaseProcessorRemoteCP):
 
     def create_path(self, remotepath):
         parts = remotepath.split('/')
-        for n in range(1, len(parts)):
+        for n in range(2, len(parts)):
             path = '/'.join(parts[:n])
             try:
                 self.sftp.stat(path)

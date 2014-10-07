@@ -36,10 +36,20 @@ class BaseProducer(BaseProvider, Thread):
         return []
 
     def run(self):
-        self.process_sequence.run(self.get_items())
+        self.process_sequence.run(self.generator)
 
     def list(self):
         self.process_sequence.list()
+
+
+@register_property('file_name', 'File name to read', str, True, "")
+@register_producer('read', 'Reads file')
+class Read(BaseProducer):
+    def __init__(self, **kwargs):
+        super(Read, self).__init__(**kwargs)
+
+    def generator(self):
+        pass
 
 
 @register_property('basedir', 'Directory to monitor', str, True, "")
@@ -54,18 +64,14 @@ class DirMon(BaseProducer):
         Consumer that recursively walks a directory structure
         and collects files do deliver to a process sequence
     """
-    basedir = ''
-    recursive = False
-
     def __init__(self, **kwargs):
         super(DirMon, self).__init__(**kwargs)
 
 
-    def get_items(self):
-        ret = []
+    def generator(self):
         if not os.path.exists(self.basedir):
             log.error("Path does not exist {0}".format(self.basedir))
-            return []
+            yield []
         if not self.recursive:
             level = 0
         else:
@@ -75,8 +81,7 @@ class DirMon(BaseProducer):
                     if FileItem.check_mtime(file_name, self.mtime) and \
                         FileItem.check_atime(file_name, self.atime) and \
                         FileItem.check_ctime(file_name, self.ctime):
-                        ret.append(FileItem(file_name, self.basedir))
-        return ret
+                        yield FileItem(file_name, self.basedir)
 
     def __repr__(self):
         return "Base Dir:{0}, Recursive: {1}, Filter: {2}".format(self.basedir, self.recursive, self.filter)
